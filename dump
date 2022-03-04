@@ -1,0 +1,10 @@
+# fp = fp / fp[-1]
+qa[:,0][-1],fp
+h = hest(Qo, shom(qa.T))
+h,Qo[:3]
+def shom(m):
+    return m/np.stack((m[:,2],m[:,2],m[:,2])).T
+Qa.shape, qa.T.shape
+# Qa / np.stack((Qa[:,2],Qa[:,2],Qa[:,2]))
+# Hest_A = hest(shom(Qa),shom(qa.T))
+# Hest_A = hest(Qa,qa.T)
