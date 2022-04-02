@@ -95,3 +95,27 @@ def triangulate_nonlin(Q, P):
         return R
 
     return scipy.optimize.least_squares(compute_residuals, x0).x
+
+
+def compute_essential(t2, R2):
+    return cross_op(t2) @ R2
+
+
+def compute_fundamental(t2, R2, K2, K1):
+    E = compute_essential(t2, R2)
+    F = np.linalg.inv(K2).T @ E @ np.linalg.inv(K1)
+    F / np.linalg.norm(F)
+    return F
+
+
+def Fest_8point(q1, q2):
+    Bs = []
+    for i, (p, q) in enumerate(zip(q1, q2)):
+        B = np.array([
+            p[0]*q[0], p[0]*q[1], p[0], p[1] *
+            q[0], p[1]*q[1], p[1], q[0], q[1], 1
+        ])
+        Bs.append(B)
+    U, S, V = np.linalg.svd(np.array(Bs))
+    Fe = V[-1].reshape(3, 3).T * -1  # why -1?
+    return Fe
