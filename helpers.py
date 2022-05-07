@@ -3,21 +3,54 @@ import numpy as np
 import cv2
 import scipy.optimize
 
-def projectpoints(K, R, t, Q):
-    Q.reshape((Q.shape[1],Q.shape[0]))
-    T = np.concatenate((R,t),axis=1)
+
+def getcube(n):
+    d_x = d_y = d_z = 1 / n
+    x0 = y0 = z0 = -0.5
+    x = np.arange(x0, -x0, d_x, dtype=float)
+    y = np.arange(y0, -y0, d_y, dtype=float)
+    z = np.arange(z0, -z0, d_z, dtype=float)
+    x = np.append(x, 0.5)
+    y = np.append(y, 0.5)
+    z = np.append(z, 0.5)
+    cube = np.stack(np.meshgrid(x, y, z))
+    Q = cube.reshape(3, -1)  # cube
+    Q = np.swapaxes(Q, 0, 1)
+    Q = Q[(abs(Q) == 0.5).sum(axis=1) >= 2]
+    ones = np.ones(Q.shape[0]).reshape(Q.shape[0], 1)
+    Q = np.concatenate((Q, ones), axis=1)
+    Q = np.append(np.vstack(
+        (x, np.zeros_like(x), np.zeros_like(x), np.ones_like(x))).T, Q, axis=0)
+    Q = np.append(np.vstack(
+        (np.zeros_like(x), y, np.zeros_like(x), np.ones_like(x))).T, Q, axis=0)
+    Q = np.append(np.vstack(
+        (np.zeros_like(x), np.zeros_like(x), z, np.ones_like(x))).T, Q, axis=0)
+    return Q
+
+
+def build_K(f, alpha, beta, deltax, deltay):
+    return np.array([
+        [f, beta*f, deltax],
+        [0, alpha*f, deltay],
+        [0, 0, 1]
+    ])
+
+
+def projectpoints(K, R, t, Q, printP=False):
+    Q.reshape((Q.shape[1], Q.shape[0]))
+    T = np.concatenate((R, t), axis=1)
     P = K @ T
     ppsx = []
     ppsy = []
     for i in range(Q.shape[0]):
-        p = Q[i,:]
-        projected = P @ p.reshape(4,1)
-        if (p == np.array([-0.5, -0.5, -0.5, 1.0])).all():
+        p = Q[i, :]
+        projected = P @ p.reshape(4, 1)
+        if printP:
             print(P)
-            print(projected/projected[2])
         ppsx.append(float(projected[0]/projected[2]))
         ppsy.append(float(projected[1]/projected[2]))
-    return ppsx,ppsy
+    return ppsx, ppsy
+
 
 def cross_op(p):
     if p.shape != (3, 1):
@@ -139,10 +172,13 @@ def Fest_8point(q1, q2):
 def estHomographyRANSAC(kp1, des1, kp2, des2):
     bf = cv2.BFMatcher_create(crossCheck=True)
     matches = bf.match(des1, des2)
-    matches = sorted(matches, key = lambda x:x.distance)
-    good = matches[:200] # just a filter, not really necessary but should speed up things
-    P1 = np.array([[kp2[m.trainIdx].pt[0],kp2[m.trainIdx].pt[1],1] for m in good])
-    P2 = np.array([[kp1[m.queryIdx].pt[0],kp1[m.queryIdx].pt[1],1] for m in good])
+    matches = sorted(matches, key=lambda x: x.distance)
+    # just a filter, not really necessary but should speed up things
+    good = matches[:200]
+    P1 = np.array([[kp2[m.trainIdx].pt[0], kp2[m.trainIdx].pt[1], 1]
+                  for m in good])
+    P2 = np.array([[kp1[m.queryIdx].pt[0], kp1[m.queryIdx].pt[1], 1]
+                  for m in good])
     threshold = (3.84 * 3**2)**2
     max_inliers = 0
     Hest = None
@@ -150,26 +186,30 @@ def estHomographyRANSAC(kp1, des1, kp2, des2):
     inlier_indices = []
     niter = 10
     for i in range(niter):
-        choice  = np.random.choice(good, 4, replace=False)
-        points1 = np.array([[kp2[m.trainIdx].pt[0],kp2[m.trainIdx].pt[1],1] for m in choice])
-        points2 = np.array([[kp1[m.queryIdx].pt[0],kp1[m.queryIdx].pt[1],1] for m in choice])
+        choice = np.random.choice(good, 4, replace=False)
+        points1 = np.array(
+            [[kp2[m.trainIdx].pt[0], kp2[m.trainIdx].pt[1], 1] for m in choice])
+        points2 = np.array(
+            [[kp1[m.queryIdx].pt[0], kp1[m.queryIdx].pt[1], 1] for m in choice])
         H, status = cv2.findHomography(points1, points2)
         inliers = 0
         inlier_points = []
-        for i,(p1,p2) in enumerate(zip(P1,P2)):
+        for i, (p1, p2) in enumerate(zip(P1, P2)):
             p1proj = (H @ p1)
             p1proj = p1proj / p1proj[-1]
             p2proj = np.linalg.inv(H) @ p2
             p2proj = p2proj / p2proj[-1]
-            d = np.linalg.norm(p2[:2] - p1proj[:2],2)**2 + np.linalg.norm(p1[:2] - p2proj[:2],2)**2
+            d = np.linalg.norm(p2[:2] - p1proj[:2], 2)**2 + \
+                np.linalg.norm(p1[:2] - p2proj[:2], 2)**2
             if d < threshold:
                 inliers += 1
-                inlier_points.append((p1,p2))
+                inlier_points.append((p1, p2))
             if inliers > max_inliers:
                 max_inliers = inliers
                 Hest = H
                 best_inlier_points = inlier_points
                 inlier_indices.append(i)
     best_inlier_points = np.array(best_inlier_points)
-    Hest, status = cv2.findHomography(best_inlier_points[:,1,:], best_inlier_points[:,0,:])
+    Hest, status = cv2.findHomography(
+        best_inlier_points[:, 1, :], best_inlier_points[:, 0, :])
     return Hest
