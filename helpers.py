@@ -3,6 +3,21 @@ import numpy as np
 import cv2
 import scipy.optimize
 
+def projectpoints(K, R, t, Q):
+    Q.reshape((Q.shape[1],Q.shape[0]))
+    T = np.concatenate((R,t),axis=1)
+    P = K @ T
+    ppsx = []
+    ppsy = []
+    for i in range(Q.shape[0]):
+        p = Q[i,:]
+        projected = P @ p.reshape(4,1)
+        if (p == np.array([-0.5, -0.5, -0.5, 1.0])).all():
+            print(P)
+            print(projected/projected[2])
+        ppsx.append(float(projected[0]/projected[2]))
+        ppsy.append(float(projected[1]/projected[2]))
+    return ppsx,ppsy
 
 def cross_op(p):
     if p.shape != (3, 1):
