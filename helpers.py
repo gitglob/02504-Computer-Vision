@@ -4,6 +4,29 @@ import cv2
 import scipy.optimize
 
 
+def distortion(p, dr):
+    dr
+    return p * (1 + dr * np.linalg.norm(p, 2))
+
+
+def tinhom3D(p):
+    s = p[3][0]
+    for i in range(3):
+        p[i][0] /= s
+    return p[:3]
+
+
+def tinhom2D(p):
+    s = p[2][0]
+    for i in range(2):
+        p[i][0] /= s
+    return p[:2]
+
+
+def thom(p):
+    return np.append(p, np.ones((1, 1)), axis=0)
+
+
 def getcube(n):
     d_x = d_y = d_z = 1 / n
     x0 = y0 = z0 = -0.5
@@ -45,7 +68,8 @@ def projectpoints(K, R, t, Q, printP=False):
     for i in range(Q.shape[0]):
         p = Q[i, :]
         projected = P @ p.reshape(4, 1)
-        if printP:
+        if printP and (Q[i, :] == np.array([-0.5, -0.5, -0.5, 1.0])).all():
+            print(projected/projected[2])
             print(P)
         ppsx.append(float(projected[0]/projected[2]))
         ppsy.append(float(projected[1]/projected[2]))
