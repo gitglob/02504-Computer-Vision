@@ -2,6 +2,7 @@ from matplotlib.pyplot import axis
 import numpy as np
 import cv2
 import scipy.optimize
+import matplotlib.pyplot as plt
 
 
 def distortion(p, dr):
@@ -74,6 +75,15 @@ def projectpoints(K, R, t, Q, printP=False):
         ppsx.append(float(projected[0]/projected[2]))
         ppsy.append(float(projected[1]/projected[2]))
     return ppsx, ppsy
+
+
+def show_imgs(imgs, gray=False):
+    for i, im in enumerate(imgs):
+        plt.figure(i)
+        if gray:
+            plt.imshow(im, cmap='gray')
+        else:
+            plt.imshow(im)
 
 
 def cross_op(p):
