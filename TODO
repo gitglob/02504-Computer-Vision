@@ -1,5 +1,13 @@
 fetch the lecture slides
 note the references for lecture notes & book
 ex8 is completely untouched!
-define essential & fundamental matrices
 take learning objectives from each slide and put corresponding points in the slides
+
+define essential & fundamental matrices
+ - Essential matrix maps a vector from a principal point to image plane (p1) to the normal of that plane. Sooooo if it's true that Ep1 = normal, then taking a vector in the same epipolar plane and multiplying it with a normal should give zero => p2'Ep1 = p2'n. Beautiful;
+ - Fundamental matrix is equivalent but operates on 3D points instead of 2D vectors. Basically replacing the 2d points in the p2'Ep1 by their derivation from projection equation. p = K^(-1)q and this gives F = K2^(-T) E K1^(-1). And the normal mapping is q2'Fq1 = 0. Wonderful;
+ - Both of them form requirements for pixel correspondences : )
+
+
+
+
