@@ -247,3 +247,14 @@ def estHomographyRANSAC(kp1, des1, kp2, des2):
     Hest, status = cv2.findHomography(
         best_inlier_points[:, 1, :], best_inlier_points[:, 0, :])
     return Hest
+
+
+def gaussian1DKernel(sigma):
+    factor = 5
+    h = np.ceil(factor*sigma)
+    x = np.arange(-h, h+1)
+    g = np.exp(-x**2/(2*sigma**2))
+    g /= g.sum()
+    g = g.reshape(-1, 1)
+    gx = (-x/sigma**2) * g
+    return (g, gx)
